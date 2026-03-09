@@ -228,6 +228,10 @@ Use `--no-interactive` for CI/log-friendly output.
 - `--enable-ferox`: enable ferox phase
 - `--ferox-depth`: ferox recursion depth
 - `--threads`: brute-force threads
+- `--dirsearch-timeout`: dirsearch request timeout in seconds (default: `10`)
+- `-H, --header`: custom header for dirsearch (repeatable)
+- `--dirsearch-full-url/--no-dirsearch-full-url`: toggle `--full-url` (default: on)
+- `--dirsearch-random-agent/--no-dirsearch-random-agent`: toggle random user-agent (default: on)
 - `--baseline-samples`: baseline probes per host (default: `3`)
 - `--baseline-timeout`: baseline probe timeout in seconds (default: `10`)
 - `--skip-baseline`: skip baseline profiling phase
@@ -286,6 +290,19 @@ List scan with custom extensions:
 
 ```bash
 pathfusion scan -l targets.txt --extensions php,txt,json,bak
+```
+
+Dirsearch-style tuning (timeout + headers + full-url + random-agent):
+
+```bash
+pathfusion scan -u https://target.tld \
+  --dirsearch-timeout 10 \
+  -H \"X-Originating-IP: 127.0.0.1\" \
+  -H \"X-Forwarded-For: 127.0.0.1\" \
+  -H \"X-Remote-IP: 127.0.0.1\" \
+  -H \"X-Remote-Addr: 127.0.0.1\" \
+  --dirsearch-full-url \
+  --dirsearch-random-agent
 ```
 
 Full recursive flow:

@@ -53,6 +53,10 @@ class DirsearchRunner:
         threads: int,
         wordlist: Path | None,
         extensions: list[str],
+        request_timeout: int,
+        headers: list[str],
+        full_url: bool,
+        random_agent: bool,
         proxy: str | None,
         insecure: bool,
         follow_redirects: bool,
@@ -83,6 +87,15 @@ class DirsearchRunner:
             cmd.extend(["-w", str(wordlist)])
         if extensions:
             cmd.extend(["-e", ",".join(sorted(set(extensions)))])
+        if self._has_flag(help_text, "--timeout"):
+            cmd.extend(["--timeout", str(request_timeout)])
+        if full_url and self._has_flag(help_text, "--full-url"):
+            cmd.append("--full-url")
+        if random_agent and self._has_flag(help_text, "--random-agent"):
+            cmd.append("--random-agent")
+        if headers and self._has_flag(help_text, "-H", "--header"):
+            for header in headers:
+                cmd.extend(["-H", header])
         if proxy and self._has_flag(help_text, "--proxy"):
             cmd.extend(["--proxy", proxy])
         if insecure and self._has_flag(help_text, "--insecure"):
@@ -101,6 +114,10 @@ class DirsearchRunner:
         threads: int,
         wordlist: Path | None,
         extensions: list[str],
+        request_timeout: int,
+        headers: list[str],
+        full_url: bool,
+        random_agent: bool,
         proxy: str | None,
         insecure: bool,
         follow_redirects: bool,
@@ -118,6 +135,10 @@ class DirsearchRunner:
                 threads,
                 wordlist,
                 extensions,
+                request_timeout,
+                headers,
+                full_url,
+                random_agent,
                 proxy,
                 insecure,
                 follow_redirects,
@@ -146,6 +167,15 @@ class DirsearchRunner:
                         fallback_cmd.extend(["-w", str(wordlist)])
                     if extensions:
                         fallback_cmd.extend(["-e", ",".join(sorted(set(extensions)))])
+                    if self._has_flag(help_text, "--timeout"):
+                        fallback_cmd.extend(["--timeout", str(request_timeout)])
+                    if full_url and self._has_flag(help_text, "--full-url"):
+                        fallback_cmd.append("--full-url")
+                    if random_agent and self._has_flag(help_text, "--random-agent"):
+                        fallback_cmd.append("--random-agent")
+                    if headers and self._has_flag(help_text, "-H", "--header"):
+                        for header in headers:
+                            fallback_cmd.extend(["-H", header])
                     if follow_redirects and self._has_flag(help_text, "--follow-redirects"):
                         fallback_cmd.append("--follow-redirects")
                     if not follow_redirects and self._has_flag(help_text, "--no-follow-redirects"):
@@ -162,6 +192,10 @@ class DirsearchRunner:
                         threads,
                         wordlist,
                         extensions,
+                        request_timeout,
+                        headers,
+                        full_url,
+                        random_agent,
                         proxy,
                         insecure,
                         follow_redirects,

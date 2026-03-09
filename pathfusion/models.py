@@ -107,6 +107,10 @@ class ScanConfig:
     enable_ferox: bool
     ferox_depth: int
     threads: int
+    dirsearch_timeout: int
+    dirsearch_headers: list[str]
+    dirsearch_full_url: bool
+    dirsearch_random_agent: bool
     baseline_samples: int
     baseline_timeout: int
     skip_baseline: bool
