@@ -36,6 +36,17 @@ class DirsearchRunner:
         multiplier = {"B": 1, "KB": 1024, "MB": 1024**2, "GB": 1024**3}.get(unit, 1)
         return int(value * multiplier)
 
+    @staticmethod
+    def _stderr_summary(stderr: str) -> str:
+        if not stderr.strip():
+            return ""
+        lines = [line.strip() for line in stderr.splitlines() if line.strip()]
+        if not lines:
+            return ""
+        if any("traceback (most recent call last)" in line.lower() for line in lines):
+            return lines[-1]
+        return lines[0][:300]
+
     def _build_command(
         self,
         target: str,
@@ -121,7 +132,8 @@ class DirsearchRunner:
             if result.returncode != 0:
                 self.logger.warning("dirsearch failed for %s with exit code %s", target, result.returncode)
                 if result.stderr.strip():
-                    self.logger.warning("dirsearch stderr: %s", result.stderr.splitlines()[0][:300])
+                    self.logger.warning("dirsearch stderr: %s", self._stderr_summary(result.stderr))
+                    self.logger.debug("dirsearch stderr (truncated): %s", result.stderr[:2000])
                 parse_error = any(
                     token in result.stderr.lower()
                     for token in {"unrecognized arguments", "unknown argument", "invalid choice", "usage:"}

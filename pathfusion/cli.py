@@ -115,6 +115,11 @@ def _check_tool_callable(binary: str) -> tuple[bool, str]:
     probe = run_command([binary, "-h"], timeout=20)
     if probe.returncode == 127:
         return False, probe.stderr
+    combined = f"{probe.stdout}\n{probe.stderr}"
+    if "traceback (most recent call last)" in combined.lower():
+        lines = [line.strip() for line in combined.splitlines() if line.strip()]
+        detail = lines[-1] if lines else "python traceback"
+        return False, f"broken installation: {detail}"
     return True, f"callable (exit={probe.returncode})"
 
 
