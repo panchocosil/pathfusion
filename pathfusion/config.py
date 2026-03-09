@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import re
-import tomllib
 from dataclasses import asdict
 from pathlib import Path
 
 from pathfusion.models import AppConfig, ToolPaths, Weights
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # Python < 3.11
+    import tomli as tomllib
 
 
 def _merge_dict(base: dict, override: dict) -> dict:
