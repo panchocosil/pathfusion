@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pathfusion"
+version = "0.1.0"
+description = "Intelligence-driven web content discovery pipeline for authorized assessments"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "PathFusion" }]
+license = { text = "MIT" }
+dependencies = [
+  "typer>=0.12.0",
+  "rich>=13.7.0",
+  "requests>=2.32.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0.0",
+]
+
+[project.scripts]
+pathfusion = "pathfusion.cli:app"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pathfusion*"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+addopts = "-q"
