@@ -14,7 +14,7 @@ from rich.table import Table
 
 from pathfusion.analyzers.baseline import build_baseline_profile, compare_to_baseline
 from pathfusion.analyzers.correlate import choose_next_targets, finding_from_url
-from pathfusion.analyzers.normalize import group_by_host, normalize_targets
+from pathfusion.analyzers.normalize import group_by_host, normalize_host, normalize_targets
 from pathfusion.analyzers.scoring import apply_scores
 from pathfusion.config import load_config
 from pathfusion.models import Finding, OutputFormat, ScanConfig, SourceTool
@@ -102,6 +102,7 @@ def _phase_header(title: str, interactive: bool) -> None:
 def _expand_scope_hosts(hosts: set[str]) -> set[str]:
     expanded: set[str] = set()
     for host in hosts:
+        host = normalize_host(host)
         expanded.add(host)
         if host.startswith("www."):
             expanded.add(host[4:])
@@ -139,7 +140,7 @@ def _to_dirsearch_findings(records: list[dict], in_scope_hosts: set[str]) -> lis
                 url = urljoin(target if target.endswith("/") else f"{target}/", str(path).lstrip("/"))
         if not isinstance(url, str) or not url.startswith(("http://", "https://")):
             continue
-        host = urlparse(url).hostname or ""
+        host = normalize_host(urlparse(url).hostname or "")
         if host not in in_scope_hosts:
             continue
         status = _parse_int(record.get("status") or record.get("status_code"))
@@ -161,7 +162,7 @@ def _to_ferox_findings(records: list[dict], in_scope_hosts: set[str]) -> list[Fi
         url = record.get("url") or record.get("request") or record.get("location")
         if not isinstance(url, str) or not url.startswith(("http://", "https://")):
             continue
-        host = urlparse(url).hostname or ""
+        host = normalize_host(urlparse(url).hostname or "")
         if host not in in_scope_hosts:
             continue
         status = _parse_int(record.get("status") or record.get("status_code"))
@@ -178,7 +179,7 @@ def _to_katana_findings(records: list[dict], in_scope_hosts: set[str]) -> list[F
         url = record.get("url")
         if not isinstance(url, str) or not url.startswith(("http://", "https://")):
             continue
-        host = urlparse(url).hostname or ""
+        host = normalize_host(urlparse(url).hostname or "")
         if host not in in_scope_hosts:
             continue
         finding = finding_from_url(url, SourceTool.KATANA)

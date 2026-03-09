@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 
 from pathfusion.models import CommandResult
@@ -53,6 +54,9 @@ class KatanaRunner:
             "-j",
             "-silent",
         ]
+        # Keep katana in host scope when the flag exists.
+        if self._has_flag(help_text, "-fs", "--field-scope"):
+            cmd.extend(["-fs", "fqdn"])
         if proxy:
             cmd.extend(["-proxy", proxy])
         if insecure:
@@ -91,6 +95,12 @@ class KatanaRunner:
         self.logger.debug("running katana command: %s", " ".join(cmd))
         result = run_command(cmd, timeout=timeout, cwd=workdir)
 
+        if result.returncode != 0 and "-fs" in cmd and "invalid" in result.stderr.lower():
+            self.logger.debug("katana field-scope value rejected, retrying without -fs")
+            no_scope_cmd = [segment for segment in cmd if segment not in {"-fs", "fqdn"}]
+            self.logger.debug("running katana no-field-scope fallback: %s", " ".join(no_scope_cmd))
+            result = run_command(no_scope_cmd, timeout=timeout, cwd=workdir)
+
         if result.returncode != 0 and "flag provided but not defined" in result.stderr:
             self.logger.debug("katana flag mismatch detected, retrying with reduced flags")
             fallback = [self.binary, "-list", str(targets_file), "-d", str(depth), "-j", "-silent"]
@@ -123,7 +133,24 @@ class KatanaRunner:
         return records, result
 
     def parse_output(self, stdout: str) -> list[dict]:
+        url_pattern = re.compile(r"https?://[^\\s\"'<>]+", re.IGNORECASE)
         records: list[dict] = []
+        seen: set[str] = set()
+
+        def _append_url(raw_url: str, payload: dict | None = None) -> None:
+            cleaned = raw_url.rstrip(".,;:)]}>").strip()
+            if not cleaned.startswith(("http://", "https://")):
+                return
+            if cleaned in seen:
+                return
+            seen.add(cleaned)
+            if payload:
+                enriched = dict(payload)
+                enriched["url"] = cleaned
+                records.append(enriched)
+                return
+            records.append({"url": cleaned})
+
         for line in stdout.splitlines():
             item = line.strip()
             if not item:
@@ -134,9 +161,19 @@ class KatanaRunner:
                 except json.JSONDecodeError:
                     continue
                 if isinstance(payload, dict):
-                    url = payload.get("url") or payload.get("request", {}).get("endpoint")
-                    if url:
-                        records.append(payload)
+                    candidates = [
+                        payload.get("url"),
+                        payload.get("request", {}).get("endpoint"),
+                        payload.get("request", {}).get("url"),
+                        payload.get("response", {}).get("url"),
+                    ]
+                    for candidate in candidates:
+                        if isinstance(candidate, str):
+                            match = url_pattern.search(candidate)
+                            if match:
+                                _append_url(match.group(0), payload)
+                                break
                 continue
-            records.append({"url": item})
+            for match in url_pattern.findall(item):
+                _append_url(match)
         return records

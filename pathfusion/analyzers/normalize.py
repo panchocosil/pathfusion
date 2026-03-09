@@ -6,6 +6,10 @@ from urllib.parse import urlparse, urlunparse
 from pathfusion.config import host_allowed
 
 
+def normalize_host(host: str) -> str:
+    return host.strip().lower().rstrip(".")
+
+
 def normalize_url(url: str) -> str:
     raw = url.strip()
     if not raw:
@@ -56,7 +60,7 @@ def normalize_targets(
             url = normalize_url(raw)
         except ValueError:
             continue
-        host = urlparse(url).hostname or ""
+        host = normalize_host(urlparse(url).hostname or "")
         if not host_allowed(host, allow_patterns, deny_patterns):
             continue
         if max_hosts is not None and host not in hosts and len(hosts) >= max_hosts:
@@ -72,7 +76,7 @@ def normalize_targets(
 def group_by_host(urls: list[str]) -> dict[str, list[str]]:
     grouped: dict[str, list[str]] = {}
     for url in urls:
-        host = urlparse(url).hostname or ""
+        host = normalize_host(urlparse(url).hostname or "")
         grouped.setdefault(host, []).append(url)
     return grouped
 

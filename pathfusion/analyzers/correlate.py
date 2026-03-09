@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from urllib.parse import urljoin, urlparse
 
-from pathfusion.analyzers.normalize import canonical_key
+from pathfusion.analyzers.normalize import canonical_key, normalize_host
 from pathfusion.analyzers.paths import build_host_insights, detect_extension, infer_tags, parent_path
 from pathfusion.models import Finding, SourceTool
 
@@ -28,7 +28,7 @@ def finding_from_url(
     return Finding(
         url=url,
         normalized_url=canonical_key(url),
-        host=parsed.hostname or "",
+        host=normalize_host(parsed.hostname or ""),
         path=path,
         parent_path=parent_path(path),
         query=parsed.query or None,

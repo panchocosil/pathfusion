@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pathfusion.analyzers.normalize import canonical_key, normalize_targets, normalize_url
+from pathfusion.analyzers.normalize import canonical_key, normalize_host, normalize_targets, normalize_url
 
 
 def test_normalize_url_adds_scheme() -> None:
@@ -22,3 +22,7 @@ def test_normalize_targets_deduplicates(tmp_path: Path) -> None:
         deny_patterns=[],
     )
     assert targets == ["https://a.com/"]
+
+
+def test_normalize_host_strips_dot_and_case() -> None:
+    assert normalize_host("WWW.Example.COM.") == "www.example.com"
