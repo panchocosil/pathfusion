@@ -228,6 +228,9 @@ Use `--no-interactive` for CI/log-friendly output.
 - `--enable-ferox`: enable ferox phase
 - `--ferox-depth`: ferox recursion depth
 - `--threads`: brute-force threads
+- `--baseline-samples`: baseline probes per host (default: `3`)
+- `--baseline-timeout`: baseline probe timeout in seconds (default: `10`)
+- `--skip-baseline`: skip baseline profiling phase
 - `--output`: output report path
 - `--output-format`: `pretty|json|jsonl|csv|markdown`
 - `--json`: JSON shortcut output path
@@ -299,6 +302,15 @@ pathfusion scan -l targets.txt \
   --json findings.json
 ```
 
+Large list / faster mode:
+
+```bash
+pathfusion scan -l targets.txt \
+  --interactive \
+  --baseline-samples 1 \
+  --baseline-timeout 3
+```
+
 ## Troubleshooting
 
 If `pathfusion` command is not found:
@@ -323,6 +335,11 @@ If results are noisy:
 - provide a tighter wordlist
 - reduce extension list with `--extensions`
 - keep `--verbose` and inspect tool-level behavior
+
+If scans are too slow on very large target lists:
+
+- reduce baseline cost with `--baseline-samples 1 --baseline-timeout 3`
+- or skip baseline entirely with `--skip-baseline`
 
 ## Testing
 

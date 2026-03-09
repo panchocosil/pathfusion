@@ -107,6 +107,9 @@ class ScanConfig:
     enable_ferox: bool
     ferox_depth: int
     threads: int
+    baseline_samples: int
+    baseline_timeout: int
+    skip_baseline: bool
     output_path: Path | None
     output_format: OutputFormat
     second_pass: bool

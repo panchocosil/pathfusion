@@ -249,6 +249,9 @@ def _build_scan_config(
     enable_ferox: bool,
     ferox_depth: int,
     threads: int,
+    baseline_samples: int,
+    baseline_timeout: int,
+    skip_baseline: bool,
     output: Path | None,
     output_format: OutputFormat,
     second_pass: bool,
@@ -271,6 +274,9 @@ def _build_scan_config(
         enable_ferox=enable_ferox,
         ferox_depth=ferox_depth,
         threads=threads,
+        baseline_samples=baseline_samples,
+        baseline_timeout=baseline_timeout,
+        skip_baseline=skip_baseline,
         output_path=output,
         output_format=output_format,
         second_pass=second_pass,
@@ -301,6 +307,9 @@ def scan(
     enable_ferox: Annotated[bool, typer.Option("--enable-ferox", help="Enable feroxbuster stage")] = False,
     ferox_depth: Annotated[int, typer.Option("--ferox-depth", help="Ferox recursion depth")] = 3,
     threads: Annotated[int, typer.Option("--threads", help="Worker threads for brute-force tools")] = 30,
+    baseline_samples: Annotated[int, typer.Option("--baseline-samples", min=1, help="Baseline probes per host")] = 3,
+    baseline_timeout: Annotated[int, typer.Option("--baseline-timeout", min=1, help="Baseline HTTP timeout (seconds)")] = 10,
+    skip_baseline: Annotated[bool, typer.Option("--skip-baseline", help="Skip baseline profiling phase")] = False,
     output: Annotated[Path | None, typer.Option("--output", help="Output report path")] = None,
     output_format: Annotated[OutputFormat, typer.Option("--output-format", help="Output format")] = OutputFormat.MARKDOWN,
     second_pass: Annotated[bool, typer.Option("--second-pass", help="Enable second katana pass") ] = False,
@@ -338,6 +347,9 @@ def scan(
         enable_ferox=enable_ferox,
         ferox_depth=ferox_depth,
         threads=threads,
+        baseline_samples=baseline_samples,
+        baseline_timeout=baseline_timeout,
+        skip_baseline=skip_baseline,
         output=output,
         output_format=output_format,
         second_pass=second_pass,
@@ -417,41 +429,49 @@ def scan(
         logger.warning("Katana produced %d records but none were in current scope host set", len(katana_records))
 
     # Phase 4 baseline
-    _phase_header("Phase 4/8 - Baseline Profiling", interactive)
     baseline_profiles = {}
-    baseline_hosts = list(grouped_targets.items())
-    if interactive:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("{task.completed}/{task.total}"),
-            TimeElapsedColumn(),
-            console=console,
-            transient=True,
-        ) as progress:
-            task = progress.add_task("Baseline probes", total=len(baseline_hosts))
-            for host, urls in baseline_hosts:
-                progress.update(task, description=f"Baseline {host}")
-                baseline_profiles[host] = build_baseline_profile(
+    if scan_config.skip_baseline:
+        _phase_header("Phase 4/8 - Baseline Profiling (Skipped)", interactive)
+        logger.info("Baseline phase skipped by user option")
+    else:
+        _phase_header("Phase 4/8 - Baseline Profiling", interactive)
+        baseline_hosts = list(grouped_targets.items())
+        if interactive:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("{task.completed}/{task.total}"),
+                TimeElapsedColumn(),
+                console=console,
+                transient=True,
+            ) as progress:
+                task = progress.add_task("Baseline probes", total=len(baseline_hosts))
+                for host, urls in baseline_hosts:
+                    progress.update(task, description=f"Baseline {host}")
+                    baseline_profiles[host] = build_baseline_profile(
+                        urls[0],
+                        insecure=scan_config.insecure,
+                        follow_redirects=scan_config.follow_redirects,
+                        proxy=scan_config.proxy,
+                        samples=scan_config.baseline_samples,
+                        timeout=scan_config.baseline_timeout,
+                        logger=logger,
+                    )
+                    progress.advance(task)
+        else:
+            baseline_profiles = {
+                host: build_baseline_profile(
                     urls[0],
                     insecure=scan_config.insecure,
                     follow_redirects=scan_config.follow_redirects,
                     proxy=scan_config.proxy,
+                    samples=scan_config.baseline_samples,
+                    timeout=scan_config.baseline_timeout,
                     logger=logger,
                 )
-                progress.advance(task)
-    else:
-        baseline_profiles = {
-            host: build_baseline_profile(
-                urls[0],
-                insecure=scan_config.insecure,
-                follow_redirects=scan_config.follow_redirects,
-                proxy=scan_config.proxy,
-                logger=logger,
-            )
-            for host, urls in grouped_targets.items()
-        }
+                for host, urls in grouped_targets.items()
+            }
 
     apply_scores(store.all(), app_config.weights)
 
@@ -628,15 +648,16 @@ def scan(
             continue
 
         profile = baseline_profiles.get(finding.host)
-        comparison = compare_to_baseline(finding.status_code, finding.content_length, profile)
-        baseline_map[finding.normalized_url] = comparison
-        if (
-            comparison.is_soft_404_like
-            and SourceTool.KATANA not in finding.sources
-            and finding.status_code not in {401, 403}
-        ):
-            finding.tags.add("soft-404-like")
-            continue
+        if profile and profile.samples:
+            comparison = compare_to_baseline(finding.status_code, finding.content_length, profile)
+            baseline_map[finding.normalized_url] = comparison
+            if (
+                comparison.is_soft_404_like
+                and SourceTool.KATANA not in finding.sources
+                and finding.status_code not in {401, 403}
+            ):
+                finding.tags.add("soft-404-like")
+                continue
         filtered_findings.append(finding)
 
     apply_scores(filtered_findings, app_config.weights, baseline_map)
