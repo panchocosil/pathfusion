@@ -25,6 +25,13 @@ class KatanaRunner:
     def _has_flag(help_text: str, *flags: str) -> bool:
         return any(flag.lower() in help_text for flag in flags)
 
+    def _tls_insecure_flag(self, help_text: str) -> str | None:
+        if self._has_flag(help_text, "-tlsi", "--tlsi"):
+            return "-tlsi"
+        if self._has_flag(help_text, "-insecure", "--insecure"):
+            return "-insecure"
+        return None
+
     def _build_command(
         self,
         targets_file: Path,
@@ -49,7 +56,9 @@ class KatanaRunner:
         if proxy:
             cmd.extend(["-proxy", proxy])
         if insecure:
-            cmd.append("-insecure")
+            insecure_flag = self._tls_insecure_flag(help_text)
+            if insecure_flag:
+                cmd.append(insecure_flag)
         if follow_redirects:
             if self._has_flag(help_text, "--follow-redirects"):
                 cmd.append("--follow-redirects")
@@ -77,6 +86,7 @@ class KatanaRunner:
         targets_file.write_text("\n".join(targets) + "\n", encoding="utf-8")
 
         help_text = self._help_text()
+        insecure_flag = self._tls_insecure_flag(help_text) if insecure else None
         cmd = self._build_command(targets_file, depth, concurrency, proxy, insecure, follow_redirects, help_text)
         self.logger.debug("running katana command: %s", " ".join(cmd))
         result = run_command(cmd, timeout=timeout, cwd=workdir)
@@ -84,6 +94,8 @@ class KatanaRunner:
         if result.returncode != 0 and "flag provided but not defined" in result.stderr:
             self.logger.debug("katana flag mismatch detected, retrying with reduced flags")
             fallback = [self.binary, "-list", str(targets_file), "-d", str(depth), "-j", "-silent"]
+            if insecure_flag:
+                fallback.append(insecure_flag)
             self.logger.debug("running katana fallback command: %s", " ".join(fallback))
             result = run_command(fallback, timeout=timeout, cwd=workdir)
 
@@ -91,6 +103,8 @@ class KatanaRunner:
         if not records and result.returncode == 0:
             # Some katana versions suppress discovered URLs with -silent in JSON mode.
             fallback = [self.binary, "-list", str(targets_file), "-d", str(depth), "-j"]
+            if insecure_flag:
+                fallback.append(insecure_flag)
             self.logger.debug("running katana no-silent fallback: %s", " ".join(fallback))
             result_retry = run_command(fallback, timeout=timeout, cwd=workdir)
             retry_records = self.parse_output(result_retry.stdout)
