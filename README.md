@@ -219,7 +219,7 @@ Use `--no-interactive` for CI/log-friendly output.
 - `-u, --url`: target URL (repeatable)
 - `-l, --list`: file with target URLs
 - `--proxy`: HTTP(S) proxy URL
-- `--insecure`: skip TLS verification
+- `--insecure/--secure`: disable/enable TLS certificate verification (default: insecure)
 - `--follow-redirects/--no-follow-redirects`: redirect handling (default: no-follow)
 - `--katana-depth`: katana crawl depth
 - `--katana-concurrency`: katana concurrency

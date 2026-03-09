@@ -81,7 +81,7 @@ class Weights:
 class AppConfig:
     tools: ToolPaths = field(default_factory=ToolPaths)
     default_proxy: str | None = None
-    insecure_tls: bool = False
+    insecure_tls: bool = True
     default_wordlists: list[str] = field(default_factory=list)
     host_allow_patterns: list[str] = field(default_factory=list)
     host_deny_patterns: list[str] = field(default_factory=list)

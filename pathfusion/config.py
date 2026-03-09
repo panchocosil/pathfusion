@@ -36,7 +36,7 @@ def _from_dict(raw: dict) -> AppConfig:
     return AppConfig(
         tools=tools,
         default_proxy=raw.get("default_proxy"),
-        insecure_tls=bool(raw.get("insecure_tls", False)),
+        insecure_tls=bool(raw.get("insecure_tls", True)),
         default_wordlists=list(raw.get("default_wordlists", [])),
         host_allow_patterns=list(raw.get("host_allow_patterns", [])),
         host_deny_patterns=list(raw.get("host_deny_patterns", [])),

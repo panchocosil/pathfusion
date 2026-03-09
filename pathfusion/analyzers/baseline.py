@@ -6,6 +6,8 @@ from statistics import median
 from urllib.parse import urljoin, urlparse
 
 import requests
+import urllib3
+from urllib3.exceptions import InsecureRequestWarning
 
 from pathfusion.models import BaselineComparison, BaselineProfile, BaselineSample
 from pathfusion.utils import quick_fingerprint, random_path_token
@@ -29,6 +31,9 @@ def build_baseline_profile(
     timeout: int = 10,
     logger: logging.Logger | None = None,
 ) -> BaselineProfile:
+    if insecure:
+        urllib3.disable_warnings(InsecureRequestWarning)
+
     parsed = urlparse(base_url)
     root = f"{parsed.scheme}://{parsed.netloc}/"
     proxies = {"http": proxy, "https": proxy} if proxy else None

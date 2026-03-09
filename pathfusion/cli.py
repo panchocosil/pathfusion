@@ -280,7 +280,10 @@ def scan(
     url: Annotated[list[str], typer.Option("-u", "--url", help="Target URL (repeatable)")] = [],
     list_file: Annotated[Path | None, typer.Option("-l", "--list", help="File with target URLs")] = None,
     proxy: Annotated[str | None, typer.Option("--proxy", help="HTTP proxy URL")] = None,
-    insecure: Annotated[bool, typer.Option("--insecure", help="Skip TLS verification")] = False,
+    insecure: Annotated[
+        bool,
+        typer.Option("--insecure/--secure", help="Disable/enable TLS certificate verification"),
+    ] = True,
     follow_redirects: Annotated[
         bool,
         typer.Option("--follow-redirects/--no-follow-redirects", help="Follow HTTP redirects during scanning"),
@@ -311,7 +314,7 @@ def scan(
     app_config = load_config(config)
 
     proxy_value = proxy if proxy is not None else app_config.default_proxy
-    insecure_value = insecure or app_config.insecure_tls
+    insecure_value = insecure
     selected_wordlist = wordlist
     if selected_wordlist is None and app_config.default_wordlists:
         selected_wordlist = Path(app_config.default_wordlists[0])

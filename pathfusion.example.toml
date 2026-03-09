@@ -6,7 +6,7 @@ dirsearch = "dirsearch"
 feroxbuster = "feroxbuster"
 
 default_proxy = ""
-insecure_tls = false
+insecure_tls = true
 
 default_wordlists = [
   "./wordlists/common.txt",
