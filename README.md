@@ -211,6 +211,7 @@ By default (`--interactive`), PathFusion shows:
 - phase headers (`Phase 1/8 ... 8/8`)
 - live progress bars for baseline, dirsearch, and ferox phases
 - status spinners for katana and second-pass recrawl
+- live discovered URLs when `--live-findings` is enabled (default)
 
 Use `--no-interactive` for CI/log-friendly output.
 
@@ -242,6 +243,7 @@ Use `--no-interactive` for CI/log-friendly output.
 - `--max-hosts`: limit distinct hosts
 - `--check`: dependency check and exit
 - `--verbose`: debug-level logs (includes executed commands)
+- `--live-findings/--no-live-findings`: print discovered URLs in real time
 - `--interactive/--no-interactive`: interactive UI toggle
 - `--config`: TOML config path
 

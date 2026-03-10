@@ -120,6 +120,7 @@ class ScanConfig:
     max_hosts: int | None
     check_only: bool
     verbose: bool
+    live_findings: bool
     config_path: Path | None
 
 

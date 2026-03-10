@@ -209,6 +209,22 @@ def _print_top_findings(findings: list[Finding], limit: int = 25) -> None:
     console.print(table)
 
 
+def _print_live_findings(
+    findings: list[Finding],
+    source: SourceTool,
+    seen: set[str],
+    enabled: bool,
+) -> None:
+    if not enabled:
+        return
+    for finding in findings:
+        if finding.normalized_url in seen:
+            continue
+        seen.add(finding.normalized_url)
+        status = str(finding.status_code) if finding.status_code is not None else "-"
+        console.print(f"[green][{source.value}][/green] {status} {finding.url}")
+
+
 def _write_outputs(
     findings: list[Finding],
     output_path: Path | None,
@@ -262,6 +278,7 @@ def _build_scan_config(
     max_hosts: int | None,
     check: bool,
     verbose: bool,
+    live_findings: bool,
     config: Path | None,
     defaults: list[str],
 ) -> ScanConfig:
@@ -291,6 +308,7 @@ def _build_scan_config(
         max_hosts=max_hosts,
         check_only=check,
         verbose=verbose,
+        live_findings=live_findings,
         config_path=config,
     )
 
@@ -334,6 +352,10 @@ def scan(
     max_hosts: Annotated[int | None, typer.Option("--max-hosts", help="Max distinct hosts to scan")] = None,
     check: Annotated[bool, typer.Option("--check", help="Check dependencies and exit")] = False,
     verbose: Annotated[bool, typer.Option("--verbose", help="Verbose logging")] = False,
+    live_findings: Annotated[
+        bool,
+        typer.Option("--live-findings/--no-live-findings", help="Show discovered URLs in real time"),
+    ] = True,
     interactive: Annotated[
         bool,
         typer.Option("--interactive/--no-interactive", help="Show interactive phase/progress UI"),
@@ -378,6 +400,7 @@ def scan(
         max_hosts=max_hosts,
         check=check,
         verbose=verbose,
+        live_findings=live_findings,
         config=config,
         defaults=app_config.default_extensions,
     )
@@ -427,6 +450,7 @@ def scan(
     logger.info("Workdir: %s", workdir)
 
     store = FindingStore()
+    live_seen: set[str] = set()
 
     # Phase 2: Katana discovery
     _phase_header("Phase 2/8 - Katana Discovery", interactive)
@@ -446,6 +470,7 @@ def scan(
         )
     katana_findings = _to_katana_findings(katana_records, in_scope_hosts)
     store.add_many(katana_findings)
+    _print_live_findings(katana_findings, SourceTool.KATANA, live_seen, scan_config.live_findings)
     logger.info("Katana findings (normalized): %d", len(katana_findings))
     if katana_records and not katana_findings:
         logger.warning("Katana produced %d records but none were in current scope host set", len(katana_records))
@@ -546,6 +571,7 @@ def scan(
                 )
                 dir_findings = _to_dirsearch_findings(records, in_scope_hosts)
                 store.add_many(dir_findings)
+                _print_live_findings(dir_findings, SourceTool.DIRSEARCH, live_seen, scan_config.live_findings)
                 logger.info("Dirsearch host=%s findings=%d", host, len(dir_findings))
                 progress.advance(task)
     else:
@@ -570,6 +596,7 @@ def scan(
             )
             dir_findings = _to_dirsearch_findings(records, in_scope_hosts)
             store.add_many(dir_findings)
+            _print_live_findings(dir_findings, SourceTool.DIRSEARCH, live_seen, scan_config.live_findings)
             logger.info("Dirsearch host=%s findings=%d", host, len(dir_findings))
 
     # Optional phase 6 feroxbuster
@@ -619,6 +646,7 @@ def scan(
                     )
                     ferox_findings = _to_ferox_findings(records, in_scope_hosts)
                     store.add_many(ferox_findings)
+                    _print_live_findings(ferox_findings, SourceTool.FEROXBUSTER, live_seen, scan_config.live_findings)
                     logger.info("Feroxbuster host=%s findings=%d", host, len(ferox_findings))
                     progress.advance(task)
         else:
@@ -638,6 +666,7 @@ def scan(
                 )
                 ferox_findings = _to_ferox_findings(records, in_scope_hosts)
                 store.add_many(ferox_findings)
+                _print_live_findings(ferox_findings, SourceTool.FEROXBUSTER, live_seen, scan_config.live_findings)
                 logger.info("Feroxbuster host=%s findings=%d", host, len(ferox_findings))
 
     # Optional phase 7 second pass
@@ -667,6 +696,7 @@ def scan(
                 )
             second_findings = _to_katana_findings(records, in_scope_hosts)
             store.add_many(second_findings)
+            _print_live_findings(second_findings, SourceTool.KATANA, live_seen, scan_config.live_findings)
             logger.info("Second-pass katana findings=%d", len(second_findings))
 
     _phase_header("Phase 8/8 - Consolidation & Scoring", interactive)
